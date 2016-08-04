@@ -24,8 +24,6 @@ process.argv.forEach(function (val, index, array) {
 	}
 });
 
-console.log(update_dev);
-
 sync.fiber(function(){
 	//check db
 	var dir = fs.readdirSync(path);
@@ -36,7 +34,6 @@ sync.fiber(function(){
 		}
 		var db = connection.database(db_name_p);
 		db.create();
-		console.log('Database '+db_name_p+' is created.');
 
 		changes = {
 			insert:[],
@@ -49,7 +46,6 @@ sync.fiber(function(){
 
 		var desing = fs.readdirSync(path+'/'+db_name);
 		desing.forEach(function(design_name) {
-			console.log(design_name);
 			var d = {};
 			d._id = '_design/'+design_name;
 			d.language = 'javascript';
@@ -105,8 +101,6 @@ sync.fiber(function(){
 			});
 		}
 
-		//console.log(prevDocs);
-		console.log(changes.delete);
 		console.log('DB: '+db_name+' - INSERT: '+changes.insert.length);
 		console.log('DB: '+db_name+' - UPDATE: '+changes.update.length);
 		console.log('DB: '+db_name+' - DELETE: '+changes.delete.length);
