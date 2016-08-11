@@ -5,6 +5,10 @@ var cheerio = require('cheerio');
 var cradle = require('cradle');
 var fs = require('fs');
 var request = require('request');
+var bunzip = require('seek-bzip');
+var decompress = require('decompress');
+var bz2 = require('unbzip2-stream');
+var path = require('path');
 
 cradle.setup({
     host: 'localhost',
@@ -107,8 +111,10 @@ var downloadAndSaveFile = function (parsedData, cb){
 var compareCouchDataWithActual = function (parsedData, selectedData, cb){
     sync.fiber(function () {
         try {
+            var wasSaved = false;
             if (selectedData.length === 0){
                 sync.await(downloadAndSaveFile(parsedData, sync.defer()));
+                wasSaved = true;
             }
             else {
                 var wasFound = false;
@@ -119,17 +125,66 @@ var compareCouchDataWithActual = function (parsedData, selectedData, cb){
                 });
                 if (!wasFound){
                     sync.await(downloadAndSaveFile(parsedData, sync.defer()));
+                    wasSaved = true;
                     console.log('HASH IS NEW:');
                 }
                 else {
                     console.log('HASH IS ALREADY IN COUCH');
                 }
             }
+
+            if (!wasSaved) {
+                sync.await(decompressDownloadedData(parsedData.hash+'.osm.bz2', 'lol.osm', sync.defer()));
+            }
             console.log('WE HAVE LATEST VERSION OF DATA FROM SLOVAKIA TO PROCESSING');
             return cb(null,{});
 
         } catch (err) {
             return cb(err, {});
+        }
+    });
+};
+
+var decompressDownloadedData = function (fileNameInput, fileNameOutput,cb){
+    sync.fiber(function () {
+        try {
+            //console.log(fileNameInput,fileNameOutput);
+            var compressedData = fs.readFileSync(fileNameInput);
+
+            /*var data = bunzip.decode(compressedData, compressedData.length );
+            console.log(data);
+            fs.writeFileSync(fileNameOutput, data);*/
+
+            /*decompress(fileNameInput, 'dist', {
+                map: file => {
+                    file.path = `asd`;
+                    return file;
+                }
+            }).then(files => {
+                console.log('done!');
+            });*/
+
+            /*var myOutputFile = fs.createWriteStream(path.normalize('generated/'+fileNameOutput));
+            fs.createReadStream('./'+fileNameInput)
+            .pipe(bz2())
+            .pipe(myOutputFile)
+            .on('error', function(err) { console.log('qwe' ,err);});*/
+
+
+              /*var data = compressJs.decompressFile(compressedData);
+              data = new Buffer(data).toString('utf8');
+              console.log(data);*/
+              var compressjs = require('compressjs');
+                var algorithm = compressjs.bzip2;
+                var data = new Buffer('Example data', 'utf8');
+                var compressed = algorithm.compressFile(data);
+                var decompressed = algorithm.decompressFile(compressed);
+                // convert from array back to string
+                var data2 = new Buffer(decompressed).toString('utf8');
+                console.log(data2);
+
+        } catch (err){
+            return cb(err, null);
         }
     });
 };
